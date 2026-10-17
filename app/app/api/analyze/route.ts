@@ -1,9 +1,4 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: Request) {
   try {
@@ -16,19 +11,41 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "مفتاح Gemini غير موجود" },
+        { status: 500 }
+      );
+    }
+
+    const base64Image = image.split(",")[1];
+    const mimeType = image.substring(
+      image.indexOf(":") + 1,
+      image.indexOf(";")
+    );
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `
 أنت مدرب تداول ICT محترف.
 حلل صورة الشارت بدقة.
 
-ركز على:
+اكتب التحليل بالعربية بشكل منظم، وركز على:
 - الاتجاه العام.
 - مناطق العرض والطلب.
-- سيولة واضحة.
+- السيولة.
 - Break of Structure.
 - Change of State.
 - Fair Value Gap.
@@ -42,27 +59,24 @@ export async function POST(request: Request) {
 لا تعطِ توصية مالية مؤكدة.
 اذكر أن القرار النهائي مسؤولية المتداول.
 `,
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "حلل هذه الصورة واكتب التحليل بالعربية بشكل منظم.",
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: image,
-              },
+                },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Image,
+                  },
+                },
+              ],
             },
           ],
-        },
-      ],
-    });
+        }),
+      }
+    );
+
+    const data = await response.json();
 
     const analysis =
-      response.choices[0]?.message?.content ||
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "لم يتمكن النظام من تحليل الصورة.";
 
     return NextResponse.json({ analysis });
