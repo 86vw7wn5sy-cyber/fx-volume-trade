@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     const analysis =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data?.?.[0]?.text ||
       "لم يتمكن النظام من تحليل الصورة.";
 
     return NextResponse.json({ analysis });
