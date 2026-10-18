@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "مفتاح Gemini غير موجود" },
+        { error: "مفتاح Gemini غير موجود في Vercel" },
         { status: 500 }
       );
     }
@@ -38,27 +38,7 @@ export async function POST(request: Request) {
             {
               parts: [
                 {
-                  text: `
-أنت مدرب تداول ICT محترف.
-حلل صورة الشارت بدقة.
-
-اكتب التحليل بالعربية بشكل منظم، وركز على:
-- الاتجاه العام.
-- مناطق العرض والطلب.
-- السيولة.
-- Break of Structure.
-- Change of State.
-- Fair Value Gap.
-- Order Block.
-- Killzone المحتمل.
-- نقطة دخول محتملة.
-- وقف الخسارة.
-- هدف أول وهدف ثاني.
-- هل يجب الدخول أم الانتظار؟
-
-لا تعطِ توصية مالية مؤكدة.
-اذكر أن القرار النهائي مسؤولية المتداول.
-`,
+                  text: "حلل صورة الشارت المرفقة بالعربية واذكر الاتجاه، مناطق السيولة، نقطة دخول محتملة، وقف الخسارة، والهدف.",
                 },
                 {
                   inlineData: {
@@ -75,9 +55,30 @@ export async function POST(request: Request) {
 
     const data = await response.json();
 
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error:
+            data?.error?.message ||
+            "فشل الاتصال بـ Gemini",
+        },
+        { status: 500 }
+      );
+    }
+
     const analysis =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "لم يتمكن النظام من تحليل الصورة.";
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!analysis) {
+      return NextResponse.json(
+        {
+          error:
+            data?.promptFeedback?.blockReason ||
+            "لم يرجع Gemini تحليلاً. راجع المفتاح أو حاول صورة أخرى.",
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ analysis });
   } catch (error) {
